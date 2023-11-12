@@ -28,6 +28,8 @@ from audiocraft.data.audio import audio_write
 from audiocraft.models.encodec import InterleaveStereoCompressionModel
 from audiocraft.models import MusicGen, MultiBandDiffusion
 
+import librosa
+
 
 MODEL = None  # Last used model
 SPACE_ID = os.environ.get('SPACE_ID', '')
@@ -114,11 +116,12 @@ def _do_predictions(texts, melodies, duration, progress=False, gradio_progress=N
     processed_melodies = []
     target_sr = 32000
     target_ac = 1
-    for melody in melodies:
-        if melody is None:
+    for melody_path in melodies:
+        if melody_path is None:
             processed_melodies.append(None)
         else:
-            sr, melody = melody[0], torch.from_numpy(melody[1]).to(MODEL.device).float().t()
+            melody, sr = librosa.load(melody_path, sr=None)
+            melody = torch.from_numpy(melody).to(MODEL.device).float().t()
             if melody.dim() == 1:
                 melody = melody[None]
             melody = melody[..., :int(sr * duration)]
@@ -256,7 +259,7 @@ def ui_full(launch_kwargs):
                     with gr.Column():
                         radio = gr.Radio(["file", "mic"], value="file",
                                          label="Condition on a melody (optional) File or Mic")
-                        melody = gr.Audio(source="upload", type="numpy", label="File",
+                        melody = gr.File(source="upload", label="File",
                                           interactive=True, elem_id="melody-input")
                 with gr.Row():
                     submit = gr.Button("Submit")
@@ -406,7 +409,7 @@ def ui_batched(launch_kwargs):
                     with gr.Column():
                         radio = gr.Radio(["file", "mic"], value="file",
                                          label="Condition on a melody (optional) File or Mic")
-                        melody = gr.Audio(source="upload", type="numpy", label="File",
+                        melody = gr.File(source="upload", label="File",
                                           interactive=True, elem_id="melody-input")
                 with gr.Row():
                     submit = gr.Button("Generate")
