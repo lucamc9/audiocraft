@@ -111,16 +111,16 @@ def load_diffusion():
 
 def _do_predictions(texts, melodies, duration, progress=False, gradio_progress=None, **gen_kwargs):
     MODEL.set_generation_params(duration=duration, **gen_kwargs)
-    print("new batch", len(texts), texts, [None if m is None else m for m in melodies])
+    print("new batch", len(texts), texts, [None if m is None else m.name for m in melodies])
     be = time.time()
     processed_melodies = []
     target_sr = 32000
     target_ac = 1
-    for melody_path in melodies:
-        if melody_path is None:
+    for melody_obj in melodies:
+        if melody_obj is None:
             processed_melodies.append(None)
         else:
-            melody, sr = librosa.load(melody_path, sr=None)
+            melody, sr = librosa.load(melody_obj.name, sr=None)
             melody = torch.from_numpy(melody).to(MODEL.device).float().t()
             if melody.dim() == 1:
                 melody = melody[None]
@@ -259,7 +259,7 @@ def ui_full(launch_kwargs):
                     with gr.Column():
                         radio = gr.Radio(["file", "mic"], value="file",
                                          label="Condition on a melody (optional) File or Mic")
-                        melody = gr.File(source="upload", label="File",
+                        melody = gr.File(source="upload", type="filepath", label="File",
                                           interactive=True, elem_id="melody-input")
                 with gr.Row():
                     submit = gr.Button("Submit")
@@ -409,7 +409,7 @@ def ui_batched(launch_kwargs):
                     with gr.Column():
                         radio = gr.Radio(["file", "mic"], value="file",
                                          label="Condition on a melody (optional) File or Mic")
-                        melody = gr.File(source="upload", label="File",
+                        melody = gr.File(source="upload", type="filepath", label="File",
                                           interactive=True, elem_id="melody-input")
                 with gr.Row():
                     submit = gr.Button("Generate")
