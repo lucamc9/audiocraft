@@ -259,7 +259,7 @@ def ui_full(launch_kwargs):
                     with gr.Column():
                         radio = gr.Radio(["file", "mic"], value="file",
                                          label="Condition on a melody (optional) File or Mic")
-                        melody = gr.File(source="upload", type="filepath", label="File",
+                        melody = gr.File(source="upload", label="File",
                                           interactive=True, elem_id="melody-input")
                 with gr.Row():
                     submit = gr.Button("Submit")
@@ -409,7 +409,7 @@ def ui_batched(launch_kwargs):
                     with gr.Column():
                         radio = gr.Radio(["file", "mic"], value="file",
                                          label="Condition on a melody (optional) File or Mic")
-                        melody = gr.File(source="upload", type="filepath", label="File",
+                        melody = gr.File(source="upload", label="File",
                                           interactive=True, elem_id="melody-input")
                 with gr.Row():
                     submit = gr.Button("Generate")
