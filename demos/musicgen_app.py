@@ -111,7 +111,7 @@ def load_diffusion():
 
 def _do_predictions(texts, melodies, duration, progress=False, gradio_progress=None, **gen_kwargs):
     MODEL.set_generation_params(duration=duration, **gen_kwargs)
-    print("new batch", len(texts), texts, [None if m is None else (m[0], m[1].shape) for m in melodies])
+    print("new batch", len(texts), texts, [None if m is None else m for m in melodies])
     be = time.time()
     processed_melodies = []
     target_sr = 32000
