@@ -117,7 +117,7 @@ def load_melody(melody_path):
         melody = midi.fluidsynth(float(sr))
     else:
         print("loading audio file")
-        melody, sr = librosa.load(melody_obj.name, sr=None)
+        melody, sr = librosa.load(melody_path, sr=None)
     return melody, sr
 
 
