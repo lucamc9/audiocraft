@@ -110,7 +110,7 @@ def load_diffusion():
         MBD = MultiBandDiffusion.get_mbd_musicgen()
 
 def load_melody(melody_path):
-    if os.path.splitext(melody_path) == ".mid":
+    if os.path.splitext(melody_path)[-1] == ".mid":
         print("loading MIDI file")
         midi = pretty_midi.PrettyMIDI(melody_path)
         sr = 44100
