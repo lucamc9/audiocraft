@@ -21,3 +21,4 @@ gradio
 torchmetrics
 encodec
 protobuf
+pretty_midi
