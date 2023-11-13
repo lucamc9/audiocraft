@@ -29,6 +29,7 @@ from audiocraft.models.encodec import InterleaveStereoCompressionModel
 from audiocraft.models import MusicGen, MultiBandDiffusion
 
 import librosa
+import pretty_midi
 
 
 MODEL = None  # Last used model
@@ -108,6 +109,17 @@ def load_diffusion():
         print("loading MBD")
         MBD = MultiBandDiffusion.get_mbd_musicgen()
 
+def load_melody(melody_path):
+    if os.path.splitext(melody_path) == ".mid":
+        print("loading MIDI file")
+        midi = pretty_midi.PrettyMIDI(melody_path)
+        sr = 44100
+        melody = midi.fluidsynth(float(sr))
+    else:
+        print("loading audio file")
+        melody, sr = librosa.load(melody_obj.name, sr=None)
+    return melody, sr
+
 
 def _do_predictions(texts, melodies, duration, progress=False, gradio_progress=None, **gen_kwargs):
     MODEL.set_generation_params(duration=duration, **gen_kwargs)
@@ -120,7 +132,7 @@ def _do_predictions(texts, melodies, duration, progress=False, gradio_progress=N
         if melody_obj is None:
             processed_melodies.append(None)
         else:
-            melody, sr = librosa.load(melody_obj.name, sr=None)
+            melody, sr = load_melody(melody_obj.name)
             melody = torch.from_numpy(melody).to(MODEL.device).float().t()
             if melody.dim() == 1:
                 melody = melody[None]
@@ -259,8 +271,7 @@ def ui_full(launch_kwargs):
                     with gr.Column():
                         radio = gr.Radio(["file", "mic"], value="file",
                                          label="Condition on a melody (optional) File or Mic")
-                        melody = gr.File(source="upload", label="File",
-                                          interactive=True, elem_id="melody-input")
+                        melody = gr.File(label="File", interactive=True, elem_id="melody-input")
                 with gr.Row():
                     submit = gr.Button("Submit")
                     # Adapted from https://github.com/rkfg/audiocraft/blob/long/app.py, MIT license.
@@ -409,8 +420,7 @@ def ui_batched(launch_kwargs):
                     with gr.Column():
                         radio = gr.Radio(["file", "mic"], value="file",
                                          label="Condition on a melody (optional) File or Mic")
-                        melody = gr.File(source="upload", label="File",
-                                          interactive=True, elem_id="melody-input")
+                        melody = gr.File(label="File", interactive=True, elem_id="melody-input")
                 with gr.Row():
                     submit = gr.Button("Generate")
             with gr.Column():
