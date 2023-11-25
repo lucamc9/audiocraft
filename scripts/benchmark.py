@@ -48,7 +48,7 @@ def evaluate(melody, description, model, duration, sr=32000):
     generated_tensor = torch.tensor(generated[None, :])
     sample_rates = torch.tensor(np.array([sr])[None, :])
     sizes = torch.tensor(np.array([melody.shape[0]])[None, :]) # assuming size is n_frames here
-    metric.update(generated_tensor, processed_melody[None, :], sizes, sample_rates)
+    metric.update(generated_tensor, processed_melody, sizes, sample_rates)
     return metric.compute()
 
 if __name__ == "__main__":
