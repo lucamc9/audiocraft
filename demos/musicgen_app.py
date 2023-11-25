@@ -23,7 +23,7 @@ from einops import rearrange
 import torch
 import gradio as gr
 
-from audiocraft.data.audio_utils import convert_audio
+from audiocraft.data.audio_utils import convert_audio, load_melody
 from audiocraft.data.audio import audio_write
 from audiocraft.models.encodec import InterleaveStereoCompressionModel
 from audiocraft.models import MusicGen, MultiBandDiffusion
@@ -109,18 +109,6 @@ def load_diffusion():
         print("loading MBD")
         MBD = MultiBandDiffusion.get_mbd_musicgen()
 
-def load_melody(melody_path):
-    if os.path.splitext(melody_path)[-1] == ".mid":
-        print("loading MIDI file")
-        midi = pretty_midi.PrettyMIDI(melody_path)
-        sr = 44100
-        melody = midi.fluidsynth(float(sr))
-    else:
-        print("loading audio file")
-        melody, sr = librosa.load(melody_path, sr=None)
-    return melody, sr
-
-
 def _do_predictions(texts, melodies, duration, progress=False, gradio_progress=None, **gen_kwargs):
     MODEL.set_generation_params(duration=duration, **gen_kwargs)
     print("new batch", len(texts), texts, [None if m is None else m.name for m in melodies])
@@ -132,7 +120,7 @@ def _do_predictions(texts, melodies, duration, progress=False, gradio_progress=N
         if melody_obj is None:
             processed_melodies.append(None)
         else:
-            melody, sr = load_melody(melody_obj.name)
+            melody, sr = load_melody(melody_obj.name, 44100)
             melody = torch.from_numpy(melody).to(MODEL.device).float().t()
             if melody.dim() == 1:
                 melody = melody[None]
