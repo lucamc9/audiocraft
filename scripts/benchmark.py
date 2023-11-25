@@ -45,10 +45,9 @@ def evaluate(melody, description, model, duration, sr=32000):
     processed_melody = process_melody(melody, model.device, sr, duration)
     generated = model.generate_with_chroma([description], [processed_melody], sr)
     metric = ChromaCosineSimilarityMetric(sample_rate=sr, n_chroma=12, radix2_exp=12, argmax=False)
-    generated_tensor = torch.tensor(generated[None, :])
     sample_rates = torch.tensor(np.array([sr])[None, :])
     sizes = torch.tensor(np.array([melody.shape[0]])[None, :]) # assuming size is n_frames here
-    metric.update(generated_tensor, processed_melody, sizes, sample_rates)
+    metric.update(generated, processed_melody[None, :], sizes, sample_rates)
     return metric.compute()
 
 if __name__ == "__main__":
