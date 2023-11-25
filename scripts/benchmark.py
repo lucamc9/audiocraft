@@ -29,7 +29,7 @@ def extract_data(input_dir, sr):
             description_file.close()
             yield melody, description
     
-    return generate(midi_paths, sr), len(midi_paths)
+    return midi_paths, generate(midi_paths, sr)
 
 def evaluate(melody, description, model, sr):
     melody_tensor = torch.tensor(melody)
@@ -55,9 +55,9 @@ if __name__ == "__main__":
     model.set_generation_params(duration=args.duration)
     
     # benchmark
-    data_generator, n_samples = extract_data(args.data_path, args.sr)
+    midi_paths, data_generator = extract_data(args.data_path, args.sr)
     scores = []
-    for melody, description in tqdm(data_generator, total=n_samples):
+    for melody, description in tqdm(data_generator, total=len(midi_paths)):
         scores.append(evaluate(melody, description, model, args.sr))
     pd.DataFrame({"path": midi_paths, "scores": scores}).to_csv(f"{os.path.dirname(args.data_path)}/results.csv")
     print(f"Score: {np.mean(scores)}±{np.std(scores)}")
