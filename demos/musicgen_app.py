@@ -28,9 +28,6 @@ from audiocraft.data.audio import audio_write
 from audiocraft.models.encodec import InterleaveStereoCompressionModel
 from audiocraft.models import MusicGen, MultiBandDiffusion
 
-import librosa
-import pretty_midi
-
 
 MODEL = None  # Last used model
 SPACE_ID = os.environ.get('SPACE_ID', '')
