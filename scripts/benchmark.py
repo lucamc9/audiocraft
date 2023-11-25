@@ -2,6 +2,7 @@ from audiocraft.metrics import ChromaCosineSimilarityMetric
 from audiocraft.models import MusicGen
 from audiocraft.data.audio_utils import load_melody
 from tqdm import tqdm
+import pandas as pd
 import numpy as np
 import argparse
 import librosa
