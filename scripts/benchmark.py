@@ -33,7 +33,7 @@ def extract_data(input_dir, sr):
 
 def evaluate(melody, description, model, sr):
     melody_tensor = torch.tensor(melody)
-    generated = model.generate_with_chroma([description], melody[None].expand(3, -1, -1), sr)
+    generated = model.generate_with_chroma([description], melody_tensor[None].expand(3, -1, -1), sr)
     # melody = melody[:generated.shape[0]] # make sure they're the same dimensions
     metric = ChromaCosineSimilarityMetric(sample_rate=sr, n_chroma=12, radix2_exp=12, argmax=False)
     generated_tensor = torch.tensor(generated[None, :])
