@@ -41,7 +41,7 @@ def process_melody(melody, device, sr, duration):
     processed_melody = convert_audio(processed_melody, sr, target_sr, target_ac)
     return processed_melody
 
-def evaluate(melody, description, model, sr, duration):
+def evaluate(melody, description, model, duration, sr=32000):
     processed_melody = process_melody(melody, model.device, sr, duration)
     generated = model.generate_with_chroma([description], [processed_melody], sr)
     metric = ChromaCosineSimilarityMetric(sample_rate=sr, n_chroma=12, radix2_exp=12, argmax=False)
@@ -66,6 +66,6 @@ if __name__ == "__main__":
     midi_paths, data_generator = extract_data(args.data_path, 32000)
     scores = []
     for melody, description in tqdm(data_generator, total=len(midi_paths)):
-        scores.append(evaluate(melody, description, model, args.sr, args.duration))
+        scores.append(evaluate(melody, description, model, args.duration))
     pd.DataFrame({"path": midi_paths, "scores": scores}).to_csv(f"{os.path.dirname(args.data_path)}/results.csv")
     print(f"Score: {np.mean(scores)}±{np.std(scores)}")
