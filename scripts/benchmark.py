@@ -1,6 +1,6 @@
 from audiocraft.metrics import ChromaCosineSimilarityMetric
 from audiocraft.models import MusicGen
-from audiocraft.data.audio_utils import load_melody
+from audiocraft.data.audio_utils import convert_audio, load_melody
 from tqdm import tqdm
 import pandas as pd
 import numpy as np
@@ -31,10 +31,19 @@ def extract_data(input_dir, sr):
     
     return midi_paths, generate(midi_paths, sr)
 
-def evaluate(melody, description, model, sr):
-    melody_tensor = torch.tensor(melody[None, :])
-    generated = model.generate_with_chroma([description], melody_tensor, sr)
-    # melody = melody[:generated.shape[0]] # make sure they're the same dimensions
+def process_melody(melody, device, sr, duration):
+    target_sr = 32000
+    target_ac = 1
+    processed_melody = torch.from_numpy(melody).to(device).float().t()
+    if processed_melody.dim() == 1:
+        processed_melody = processed_melody[None]
+    processed_melody = processed_melody[..., :int(sr * duration)]
+    processed_melody = convert_audio(processed_melody, sr, target_sr, target_ac)
+    return processed_melody
+
+def evaluate(melody, description, model, sr, duration):
+    processed_melody = process_melody(melody, model.device, sr, duration)
+    generated = model.generate_with_chroma([description], [processed_melody], sr)
     metric = ChromaCosineSimilarityMetric(sample_rate=sr, n_chroma=12, radix2_exp=12, argmax=False)
     generated_tensor = torch.tensor(generated[None, :])
     sample_rates = torch.tensor(np.array([sr])[None, :])
@@ -47,7 +56,6 @@ if __name__ == "__main__":
     parser.add_argument("--data_path", type=str, required=True, help="path to evaluation dataset")
     parser.add_argument("--model", type=str, default="facebook/musicgen-melody", help="path to evaluation dataset")
     parser.add_argument("--duration", type=int, default=10, help="duration of generated audio")
-    parser.add_argument("--sr", type=int, default=32000, help="default sample rate")
     args = parser.parse_args()
 
     # model prep
@@ -55,9 +63,9 @@ if __name__ == "__main__":
     model.set_generation_params(duration=args.duration)
     
     # benchmark
-    midi_paths, data_generator = extract_data(args.data_path, args.sr)
+    midi_paths, data_generator = extract_data(args.data_path, 32000)
     scores = []
     for melody, description in tqdm(data_generator, total=len(midi_paths)):
-        scores.append(evaluate(melody, description, model, args.sr))
+        scores.append(evaluate(melody, description, model, args.sr, args.duration))
     pd.DataFrame({"path": midi_paths, "scores": scores}).to_csv(f"{os.path.dirname(args.data_path)}/results.csv")
     print(f"Score: {np.mean(scores)}±{np.std(scores)}")
