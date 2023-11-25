@@ -117,7 +117,7 @@ def _do_predictions(texts, melodies, duration, progress=False, gradio_progress=N
         if melody_obj is None:
             processed_melodies.append(None)
         else:
-            melody, sr = load_melody(melody_obj.name, 44100)
+            melody, sr = load_melody(melody_obj.name, 44100, True)
             melody = torch.from_numpy(melody).to(MODEL.device).float().t()
             if melody.dim() == 1:
                 melody = melody[None]

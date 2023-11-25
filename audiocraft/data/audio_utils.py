@@ -177,12 +177,14 @@ def i16_pcm(wav: torch.Tensor) -> torch.Tensor:
         assert wav.dtype == torch.int16
         return wav
 
-def load_melody(melody_path, sr):
+def load_melody(melody_path, sr, debug=False):
     if os.path.splitext(melody_path)[-1] == ".mid":
-        print("loading MIDI file")
+        if debug:
+            print("loading MIDI file")
         midi = pretty_midi.PrettyMIDI(melody_path)
         melody = midi.fluidsynth(float(sr))
     else:
-        print("loading audio file")
+        if debug:
+            print("loading audio file")
         melody, sr = librosa.load(melody_path, sr=None)
     return melody, sr
