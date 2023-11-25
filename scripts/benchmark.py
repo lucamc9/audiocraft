@@ -54,7 +54,7 @@ if __name__ == "__main__":
     model.set_generation_params(duration=args.duration)
     
     # benchmark
-    data_generator, n_samples = extract_data(args.data_path)
+    data_generator, n_samples = extract_data(args.data_path, args.sr)
     scores = []
     for melody, description in tqdm(data_generator, total=n_samples):
         scores.append(evaluate(melody, description, model, args.sr))
