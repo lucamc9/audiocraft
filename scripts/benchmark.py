@@ -1,4 +1,5 @@
 from audiocraft.metrics import ChromaCosineSimilarityMetric
+from audiocraft.models import MusicGen
 from audiocraft.data.audio_utils import load_melody
 from tqdm import tqdm
 import numpy as np
