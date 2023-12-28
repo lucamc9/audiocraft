@@ -83,4 +83,4 @@ if __name__ == "__main__":
 
     df = pd.DataFrame(rows, columns=["path", "caption", "score"])
     df.to_csv(f"{os.path.dirname(args.data_path)}/results.csv")
-    print(f"Score: {df["score"].mean()}±{df["score"].std()}")
+    print(f'Score: {df["score"].mean()}±{df["score"].std()}')
