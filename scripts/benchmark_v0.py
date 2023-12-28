@@ -53,7 +53,7 @@ def evaluate(melody, caption, model, duration, sr=32000):
     sample_rates = torch.tensor(np.array([sr])[None, :])
     sizes = torch.tensor(np.array([melody.shape[0]])[None, :]) # assuming size is n_frames here
     metric.update(generated, processed_melody[None, :], sizes, sample_rates)
-    return metric.compute(), generated
+    return metric.compute(), generated[0]
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
