@@ -46,9 +46,9 @@ def process_melody(melody, device, sr, duration):
     processed_melody = convert_audio(processed_melody, sr, target_sr, target_ac)
     return processed_melody
 
-def evaluate(melody, description, model, duration, sr=32000):
+def evaluate(melody, caption, model, duration, sr=32000):
     processed_melody = process_melody(melody, model.device, sr, duration)
-    generated = model.generate_with_chroma([description], [processed_melody], sr)
+    generated = model.generate_with_chroma([caption], [processed_melody], sr)
     metric = ChromaCosineSimilarityMetric(sample_rate=sr, n_chroma=12, radix2_exp=12, argmax=False)
     sample_rates = torch.tensor(np.array([sr])[None, :])
     sizes = torch.tensor(np.array([melody.shape[0]])[None, :]) # assuming size is n_frames here
@@ -75,7 +75,7 @@ if __name__ == "__main__":
     rows = []
     for melody, path, caption in tqdm(data_generator, total=n_total):
         # evaluate
-        score, generated = evaluate(melody, description, model, args.duration)
+        score, generated = evaluate(melody, caption, model, args.duration)
         rows.append([path, caption, score])
         # save output
         basename = os.path.splitext(os.path.basename(path))[0]
