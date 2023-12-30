@@ -83,5 +83,5 @@ if __name__ == "__main__":
         audio_write(f'{args.output_path}/{basename}_{idx}', generated.cpu(), model.sample_rate, strategy="loudness", loudness_compressor=True)
 
     df = pd.DataFrame(rows, columns=["path", "caption", "score"])
-    df.to_csv(f"{os.path.dirname(args.data_path)}/results.csv")
+    df.to_csv(f"{args.output_path}/results.csv")
     print(f'Score: {df["score"].mean()}±{df["score"].std()}')
