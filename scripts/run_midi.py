@@ -27,6 +27,6 @@ if __name__ == "__main__":
 
     # inference
     melody_midi = pretty_midi.PrettyMIDI(args.midi_path)
-    generated = model.generate_with_midi([args.caption], [melody_midi], sr)
+    generated = model.generate_with_chroma([args.caption], [melody_midi], sr)
     
     print(f"Generated {generated.shape}")

@@ -507,27 +507,198 @@ class WaveformConditioner(BaseConditioner):
         return embeds, mask
 
 
-class ChromaStemConditioner(WaveformConditioner):
-    """Chroma conditioner based on stems.
-    The ChromaStemConditioner uses DEMUCS to first filter out drums and bass, as
-    the drums and bass often dominate the chroma leading to the chroma features
-    not containing information about the melody.
+# class ChromaStemConditioner(WaveformConditioner):
+#     """Chroma conditioner based on stems.
+#     The ChromaStemConditioner uses DEMUCS to first filter out drums and bass, as
+#     the drums and bass often dominate the chroma leading to the chroma features
+#     not containing information about the melody.
 
-    Args:
-        output_dim (int): Output dimension for the conditioner.
-        sample_rate (int): Sample rate for the chroma extractor.
-        n_chroma (int): Number of chroma bins for the chroma extractor.
-        radix2_exp (int): Size of stft window for the chroma extractor (power of 2, e.g. 12 -> 2^12).
-        duration (int): duration used during training. This is later used for correct padding
-            in case we are using chroma as prefix.
-        match_len_on_eval (bool, optional): if True then all chromas are padded to the training
-            duration. Defaults to False.
-        eval_wavs (str, optional): path to a dataset manifest with waveform, this waveforms are used as
-            conditions during eval (for cases where we don't want to leak test conditions like MusicCaps).
-            Defaults to None.
-        n_eval_wavs (int, optional): limits the number of waveforms used for conditioning. Defaults to 0.
-        device (tp.Union[torch.device, str], optional): Device for the conditioner.
-        **kwargs: Additional parameters for the chroma extractor.
+#     Args:
+#         output_dim (int): Output dimension for the conditioner.
+#         sample_rate (int): Sample rate for the chroma extractor.
+#         n_chroma (int): Number of chroma bins for the chroma extractor.
+#         radix2_exp (int): Size of stft window for the chroma extractor (power of 2, e.g. 12 -> 2^12).
+#         duration (int): duration used during training. This is later used for correct padding
+#             in case we are using chroma as prefix.
+#         match_len_on_eval (bool, optional): if True then all chromas are padded to the training
+#             duration. Defaults to False.
+#         eval_wavs (str, optional): path to a dataset manifest with waveform, this waveforms are used as
+#             conditions during eval (for cases where we don't want to leak test conditions like MusicCaps).
+#             Defaults to None.
+#         n_eval_wavs (int, optional): limits the number of waveforms used for conditioning. Defaults to 0.
+#         device (tp.Union[torch.device, str], optional): Device for the conditioner.
+#         **kwargs: Additional parameters for the chroma extractor.
+#     """
+#     def __init__(self, output_dim: int, sample_rate: int, n_chroma: int, radix2_exp: int,
+#                  duration: float, match_len_on_eval: bool = True, eval_wavs: tp.Optional[str] = None,
+#                  n_eval_wavs: int = 0, cache_path: tp.Optional[tp.Union[str, Path]] = None,
+#                  device: tp.Union[torch.device, str] = 'cpu', **kwargs):
+#         from demucs import pretrained
+#         super().__init__(dim=n_chroma, output_dim=output_dim, device=device)
+#         self.autocast = TorchAutocast(enabled=device != 'cpu', device_type=self.device, dtype=torch.float32)
+#         self.sample_rate = sample_rate
+#         self.match_len_on_eval = match_len_on_eval
+#         if match_len_on_eval:
+#             self._use_masking = False
+#         self.duration = duration
+#         self.__dict__['demucs'] = pretrained.get_model('htdemucs').to(device)
+#         stem_sources: list = self.demucs.sources  # type: ignore
+#         self.stem_indices = torch.LongTensor([stem_sources.index('vocals'), stem_sources.index('other')]).to(device)
+#         self.chroma = ChromaExtractor(sample_rate=sample_rate, n_chroma=n_chroma,
+#                                       radix2_exp=radix2_exp, **kwargs).to(device)
+#         self.chroma_len = self._get_chroma_len()
+#         self.eval_wavs: tp.Optional[torch.Tensor] = self._load_eval_wavs(eval_wavs, n_eval_wavs)
+#         self.cache = None
+#         if cache_path is not None:
+#             self.cache = EmbeddingCache(Path(cache_path) / 'wav', self.device,
+#                                         compute_embed_fn=self._get_full_chroma_for_cache,
+#                                         extract_embed_fn=self._extract_chroma_chunk)
+
+#     def _downsampling_factor(self) -> int:
+#         return self.chroma.winhop
+
+#     def _load_eval_wavs(self, path: tp.Optional[str], num_samples: int) -> tp.Optional[torch.Tensor]:
+#         """Load pre-defined waveforms from a json.
+#         These waveforms will be used for chroma extraction during evaluation.
+#         This is done to make the evaluation on MusicCaps fair (we shouldn't see the chromas of MusicCaps).
+#         """
+#         if path is None:
+#             return None
+
+#         logger.info(f"Loading evaluation wavs from {path}")
+#         from audiocraft.data.audio_dataset import AudioDataset
+#         dataset: AudioDataset = AudioDataset.from_meta(
+#             path, segment_duration=self.duration, min_audio_duration=self.duration,
+#             sample_rate=self.sample_rate, channels=1)
+
+#         if len(dataset) > 0:
+#             eval_wavs = dataset.collater([dataset[i] for i in range(num_samples)]).to(self.device)
+#             logger.info(f"Using {len(eval_wavs)} evaluation wavs for chroma-stem conditioner")
+#             return eval_wavs
+#         else:
+#             raise ValueError("Could not find evaluation wavs, check lengths of wavs")
+
+#     def reset_eval_wavs(self, eval_wavs: tp.Optional[torch.Tensor]) -> None:
+#         self.eval_wavs = eval_wavs
+
+#     def has_eval_wavs(self) -> bool:
+#         return self.eval_wavs is not None
+
+#     def _sample_eval_wavs(self, num_samples: int) -> torch.Tensor:
+#         """Sample wavs from a predefined list."""
+#         assert self.eval_wavs is not None, "Cannot sample eval wavs as no eval wavs provided."
+#         total_eval_wavs = len(self.eval_wavs)
+#         out = self.eval_wavs
+#         if num_samples > total_eval_wavs:
+#             out = self.eval_wavs.repeat(num_samples // total_eval_wavs + 1, 1, 1)
+#         return out[torch.randperm(len(out))][:num_samples]
+
+#     def _get_chroma_len(self) -> int:
+#         """Get length of chroma during training."""
+#         dummy_wav = torch.zeros((1, int(self.sample_rate * self.duration)), device=self.device)
+#         dummy_chr = self.chroma(dummy_wav)
+#         return dummy_chr.shape[1]
+
+#     @torch.no_grad()
+#     def _get_stemmed_wav(self, wav: torch.Tensor, sample_rate: int) -> torch.Tensor:
+#         """Get parts of the wav that holds the melody, extracting the main stems from the wav."""
+#         from demucs.apply import apply_model
+#         from demucs.audio import convert_audio
+#         with self.autocast:
+#             wav = convert_audio(
+#                 wav, sample_rate, self.demucs.samplerate, self.demucs.audio_channels)  # type: ignore
+#             stems = apply_model(self.demucs, wav, device=self.device)
+#             stems = stems[:, self.stem_indices]  # extract relevant stems for melody conditioning
+#             mix_wav = stems.sum(1)  # merge extracted stems to single waveform
+#             mix_wav = convert_audio(mix_wav, self.demucs.samplerate, self.sample_rate, 1)  # type: ignore
+#             return mix_wav
+
+#     @torch.no_grad()
+#     def _extract_chroma(self, wav: torch.Tensor) -> torch.Tensor:
+#         """Extract chroma features from the waveform."""
+#         with self.autocast:
+#             return self.chroma(wav)
+
+#     @torch.no_grad()
+#     def _compute_wav_embedding(self, wav: torch.Tensor, sample_rate: int) -> torch.Tensor:
+#         """Compute wav embedding, applying stem and chroma extraction."""
+#         # avoid 0-size tensors when we are working with null conds
+#         if wav.shape[-1] == 1:
+#             return self._extract_chroma(wav)
+#         stems = self._get_stemmed_wav(wav, sample_rate)
+#         chroma = self._extract_chroma(stems)
+#         return chroma
+
+#     @torch.no_grad()
+#     def _get_full_chroma_for_cache(self, path: tp.Union[str, Path], x: WavCondition, idx: int) -> torch.Tensor:
+#         """Extract chroma from the whole audio waveform at the given path."""
+#         wav, sr = audio_read(path)
+#         wav = wav[None].to(self.device)
+#         wav = convert_audio(wav, sr, self.sample_rate, to_channels=1)
+#         chroma = self._compute_wav_embedding(wav, self.sample_rate)[0]
+#         return chroma
+
+#     def _extract_chroma_chunk(self, full_chroma: torch.Tensor, x: WavCondition, idx: int) -> torch.Tensor:
+#         """Extract a chunk of chroma from the full chroma derived from the full waveform."""
+#         wav_length = x.wav.shape[-1]
+#         seek_time = x.seek_time[idx]
+#         assert seek_time is not None, (
+#             "WavCondition seek_time is required "
+#             "when extracting chroma chunks from pre-computed chroma.")
+#         full_chroma = full_chroma.float()
+#         frame_rate = self.sample_rate / self._downsampling_factor()
+#         target_length = int(frame_rate * wav_length / self.sample_rate)
+#         index = int(frame_rate * seek_time)
+#         out = full_chroma[index: index + target_length]
+#         out = F.pad(out[None], (0, 0, 0, target_length - out.shape[0]))[0]
+#         return out.to(self.device)
+
+#     @torch.no_grad()
+#     def _get_wav_embedding(self, x: WavCondition) -> torch.Tensor:
+#         """Get the wav embedding from the WavCondition.
+#         The conditioner will either extract the embedding on-the-fly computing it from the condition wav directly
+#         or will rely on the embedding cache to load the pre-computed embedding if relevant.
+#         """
+#         sampled_wav: tp.Optional[torch.Tensor] = None
+#         if not self.training and self.eval_wavs is not None:
+#             warn_once(logger, "Using precomputed evaluation wavs!")
+#             sampled_wav = self._sample_eval_wavs(len(x.wav))
+
+#         no_undefined_paths = all(p is not None for p in x.path)
+#         no_nullified_cond = x.wav.shape[-1] > 1
+#         if sampled_wav is not None:
+#             chroma = self._compute_wav_embedding(sampled_wav, self.sample_rate)
+#         elif self.cache is not None and no_undefined_paths and no_nullified_cond:
+#             paths = [Path(p) for p in x.path if p is not None]
+#             chroma = self.cache.get_embed_from_cache(paths, x)
+#         else:
+#             assert all(sr == x.sample_rate[0] for sr in x.sample_rate), "All sample rates in batch should be equal."
+#             chroma = self._compute_wav_embedding(x.wav, x.sample_rate[0])
+
+#         if self.match_len_on_eval:
+#             B, T, C = chroma.shape
+#             if T > self.chroma_len:
+#                 chroma = chroma[:, :self.chroma_len]
+#                 logger.debug(f"Chroma was truncated to match length! ({T} -> {chroma.shape[1]})")
+#             elif T < self.chroma_len:
+#                 n_repeat = int(math.ceil(self.chroma_len / T))
+#                 chroma = chroma.repeat(1, n_repeat, 1)
+#                 chroma = chroma[:, :self.chroma_len]
+#                 logger.debug(f"Chroma was repeated to match length! ({T} -> {chroma.shape[1]})")
+
+#         return chroma
+
+#     def tokenize(self, x: WavCondition) -> WavCondition:
+#         """Apply WavConditioner tokenization and populate cache if needed."""
+#         x = super().tokenize(x)
+#         no_undefined_paths = all(p is not None for p in x.path)
+#         if self.cache is not None and no_undefined_paths:
+#             paths = [Path(p) for p in x.path if p is not None]
+#             self.cache.populate_embed_cache(paths, x)
+#         return x
+
+class ChromaStemConditioner(WaveformConditioner):
+    """
     """
     def __init__(self, output_dim: int, sample_rate: int, n_chroma: int, radix2_exp: int,
                  duration: float, match_len_on_eval: bool = True, eval_wavs: tp.Optional[str] = None,
@@ -655,25 +826,9 @@ class ChromaStemConditioner(WaveformConditioner):
 
     @torch.no_grad()
     def _get_wav_embedding(self, x: WavCondition) -> torch.Tensor:
-        """Get the wav embedding from the WavCondition.
-        The conditioner will either extract the embedding on-the-fly computing it from the condition wav directly
-        or will rely on the embedding cache to load the pre-computed embedding if relevant.
         """
-        sampled_wav: tp.Optional[torch.Tensor] = None
-        if not self.training and self.eval_wavs is not None:
-            warn_once(logger, "Using precomputed evaluation wavs!")
-            sampled_wav = self._sample_eval_wavs(len(x.wav))
-
-        no_undefined_paths = all(p is not None for p in x.path)
-        no_nullified_cond = x.wav.shape[-1] > 1
-        if sampled_wav is not None:
-            chroma = self._compute_wav_embedding(sampled_wav, self.sample_rate)
-        elif self.cache is not None and no_undefined_paths and no_nullified_cond:
-            paths = [Path(p) for p in x.path if p is not None]
-            chroma = self.cache.get_embed_from_cache(paths, x)
-        else:
-            assert all(sr == x.sample_rate[0] for sr in x.sample_rate), "All sample rates in batch should be equal."
-            chroma = self._compute_wav_embedding(x.wav, x.sample_rate[0])
+        """
+        chroma = x.wav # just passing in the chromas directly
 
         if self.match_len_on_eval:
             B, T, C = chroma.shape
