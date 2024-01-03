@@ -26,7 +26,11 @@ if __name__ == "__main__":
     model.set_generation_params(duration=duration)
 
     # inference
-    melody_midi = pretty_midi.PrettyMIDI(args.midi_path)
-    generated = model.generate_with_chroma([args.caption], [melody_midi], sr)
+    melody = pretty_midi.PrettyMIDI(args.midi_path)
+    chroma = melody.get_chroma(fs=235/30) # (12, 77)
+    chroma = np.swapaxes(chroma, 0, 1)[np.newaxis, :, :] # (1, 77, 12) TODO: figure out chunking
+    chroma[chroma > 0] = 1 # normalise
+    chroma = torch.from_numpy(chroma).type(torch.FloatTensor)
+    generated = model.generate_with_chroma([args.caption], [chroma], sr)
     
     print(f"Generated {generated.shape}")
