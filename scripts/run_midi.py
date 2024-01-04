@@ -26,10 +26,12 @@ if __name__ == "__main__":
     model.set_generation_params(duration=duration)
 
     # inference
-    melody = pretty_midi.PrettyMIDI(args.midi_path)
-    chroma = melody.get_chroma(fs=235/30) # (12, 77)
-    chroma = np.swapaxes(chroma, 0, 1) # (77, 12) TODO: figure out chunking
-    chroma[chroma > 0] = 1 # normalise
+    # melody = pretty_midi.PrettyMIDI(args.midi_path)
+    # chroma = melody.get_chroma(fs=235/30) # (12, 77)
+    # chroma = np.swapaxes(chroma, 0, 1) # (77, 12) TODO: figure out chunking
+    # chroma[chroma > 0] = 1 # normalise
+    # TODO: remove after quick test
+    chroma = np.load(args.midi_path)
     chroma = torch.from_numpy(chroma).type(torch.FloatTensor)
     generated = model.generate_with_chroma([args.caption], [chroma], sr)
     audio_write(f'{os.path.dirname(args.midi_path)}/generated', generated[0].cpu(), model.sample_rate, strategy="loudness", loudness_compressor=True)
