@@ -15,6 +15,7 @@ import random
 import re
 import typing as tp
 import warnings
+import numpy as np
 
 import einops
 from num2words import num2words
@@ -627,6 +628,7 @@ class ChromaStemConditioner(WaveformConditioner):
             return self._extract_chroma(wav)
         stems = self._get_stemmed_wav(wav, sample_rate)
         chroma = self._extract_chroma(stems)
+        np.save("/tmp/chroma.npy", chroma.cpu().numpy())
         return chroma
 
     @torch.no_grad()
@@ -686,6 +688,7 @@ class ChromaStemConditioner(WaveformConditioner):
                 chroma = chroma[:, :self.chroma_len]
                 logger.debug(f"Chroma was repeated to match length! ({T} -> {chroma.shape[1]})")
 
+        np.save("/tmp/chroma_full.npy", chroma.cpu().numpy())
         return chroma
 
     def tokenize(self, x: WavCondition) -> WavCondition:
