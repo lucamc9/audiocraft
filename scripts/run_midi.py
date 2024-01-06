@@ -22,11 +22,11 @@ def get_chroma(midi):
     norm_chroma[:] = 0
     norm_chroma.scatter_(dim=-1, index=idx, value=1)
     
-    # 3. add and fill second dimension with C1
-    norm_chroma = torch.unsqueeze(norm_chroma, 0)
-    C1_array = np.zeros((1, 79, 12))
-    C1_array[0, :, 0] = 1
-    norm_chroma = torch.cat((norm_chroma, torch.Tensor(C1_array)))
+    # # 3. add and fill second dimension with C1
+    # norm_chroma = torch.unsqueeze(norm_chroma, 0)
+    # C1_array = np.zeros((1, 79, 12))
+    # C1_array[0, :, 0] = 1
+    # norm_chroma = torch.cat((norm_chroma, torch.Tensor(C1_array)))
     
     return norm_chroma
 

@@ -15,6 +15,7 @@ import random
 import re
 import typing as tp
 import warnings
+import numpy as np
 
 import einops
 from num2words import num2words
@@ -828,7 +829,15 @@ class ChromaStemConditioner(WaveformConditioner):
     def _get_wav_embedding(self, x: WavCondition) -> torch.Tensor:
         """
         """
-        chroma = x.wav # just passing in the chromas directly
+        
+        def add_and_fill_C1(norm_chroma)
+            # 3. add and fill second dimension with C1
+            norm_chroma = torch.unsqueeze(norm_chroma, 0)
+            C1_array = np.zeros((1, 79, 12))
+            C1_array[0, :, 0] = 1
+            return torch.cat((norm_chroma, torch.Tensor(C1_array)))
+        
+        chroma = add_and_fill_C1(x.wav) # just passing in the chromas directly
 
         if self.match_len_on_eval:
             B, T, C = chroma.shape
