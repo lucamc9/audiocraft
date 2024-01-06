@@ -830,7 +830,7 @@ class ChromaStemConditioner(WaveformConditioner):
         """
         """
         
-        def add_and_fill_C1(norm_chroma)
+        def add_and_fill_C1(norm_chroma):
             # 3. add and fill second dimension with C1
             norm_chroma = torch.unsqueeze(norm_chroma, 0)
             C1_array = np.zeros((1, 79, 12))
