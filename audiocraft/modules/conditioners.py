@@ -16,6 +16,8 @@ import re
 import typing as tp
 import warnings
 import numpy as np
+import pretty_midi
+import os
 
 import einops
 from num2words import num2words
@@ -37,6 +39,24 @@ from ..quantization import ResidualVectorQuantizer
 from ..utils.autocast import TorchAutocast
 from ..utils.cache import EmbeddingCache
 from ..utils.utils import collate, hash_trick, length_to_mask, load_clap_state_dict, warn_once
+
+def get_chroma(midi):
+    # 1. extract chroma with 79 timesteps to match MusicGen's chroma
+    chroma = midi.get_chroma(fs=79/midi.get_end_time()) # desired_n * 1/fs = end_time
+    
+    # 2. argmax + normalise
+    norm_chroma = torch.Tensor(chroma.copy().T)
+    idx = norm_chroma.argmax(-1, keepdim=True)
+    norm_chroma[:] = 0
+    norm_chroma.scatter_(dim=-1, index=idx, value=1)
+    
+    # 3. add and fill second dimension with C1
+    norm_chroma = torch.unsqueeze(norm_chroma, 0)
+    C1_array = np.zeros((1, 79, 12))
+    C1_array[0, :, 0] = 1
+    norm_chroma = torch.cat((norm_chroma, torch.Tensor(C1_array)))
+    
+    return norm_chroma
 
 
 logger = logging.getLogger(__name__)
@@ -830,14 +850,8 @@ class ChromaStemConditioner(WaveformConditioner):
         """
         """
         
-        def add_and_fill_C1(norm_chroma):
-            # 3. add and fill second dimension with C1
-            norm_chroma = torch.unsqueeze(norm_chroma, 0)
-            C1_array = np.zeros((1, 79, 12))
-            C1_array[0, :, 0] = 1
-            return torch.cat((norm_chroma, torch.Tensor(C1_array)))
-        
-        chroma = add_and_fill_C1(x.wav) # just passing in the chromas directly
+        midi = pretty_midi.PrettyMIDI(os.environ['MIDI_PATH'])
+        chroma = get_chroma(midi)
 
         if self.match_len_on_eval:
             B, T, C = chroma.shape
