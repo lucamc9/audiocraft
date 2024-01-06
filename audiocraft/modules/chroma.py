@@ -30,10 +30,10 @@ class ChromaExtractor(nn.Module):
                  winlen: tp.Optional[int] = None, winhop: tp.Optional[int] = None, argmax: bool = False,
                  norm: float = torch.inf):
         super().__init__()
-        self.winlen = winlen or 2 ** radix2_exp
-        self.nfft = nfft or self.winlen
-        self.winhop = winhop or (self.winlen // 4)
-        self.sample_rate = sample_rate
+        self.winlen = winlen or 2 ** radix2_exp # 16384
+        self.nfft = nfft or self.winlen # 16384
+        self.winhop = winhop or (self.winlen // 4) # 4096
+        self.sample_rate = sample_rate # 32000
         self.n_chroma = n_chroma
         self.norm = norm
         self.argmax = argmax
