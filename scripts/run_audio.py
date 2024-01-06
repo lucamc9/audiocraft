@@ -38,5 +38,6 @@ if __name__ == "__main__":
     melody, _ = load_melody(args.audio_path, sr)
     processed_melody = process_melody(melody, model.device, sr, duration)
     generated = model.generate_with_chroma([args.caption], [processed_melody], sr)
+    audio_write(f'{os.path.dirname(args.audio_path)}/generated', generated[0].cpu(), model.sample_rate, strategy="loudness", loudness_compressor=True)
     
     print(f"Generated {generated.shape}")
