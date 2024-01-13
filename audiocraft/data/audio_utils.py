@@ -14,6 +14,8 @@ import torchaudio
 import os
 import pretty_midi
 import librosa
+import numpy as np
+import scipy
 
 def convert_audio_channels(wav: torch.Tensor, channels: int = 2) -> torch.Tensor:
     """Convert audio to the given number of channels.
@@ -177,12 +179,32 @@ def i16_pcm(wav: torch.Tensor) -> torch.Tensor:
         assert wav.dtype == torch.int16
         return wav
 
-def load_melody(melody_path, sr, debug=False):
+def load_midi(melody_path, sr, instrument):
+    """
+    Load MIDI file and synthesize with the specified instrument.
+        - Instruments 1-128 are synthesized with fluidsynth and the numbers 
+        correspond to the standard MIDI program mapping.
+        - Instruments 129 and 130 are the sine and the square waveforms, 
+        which are synthesized with pretty_midi.
+    """
+    midi = pretty_midi.PrettyMIDI(melody_path)
+    if instrument >= 1 and instrument <= 128:
+        new_instrument = pretty_midi.Instrument(program=instrument)
+        new_instrument.notes = midi.instruments[0].notes # assuming only 1 instrument (verified by benchmark set)
+        midi.instruments = [new_instrument]
+        return midi.fluidsynth(float(sr))
+    elif instrument == 129:
+        return midi.synthesize(fs=sr, wave=np.sin)
+    elif instrument == 130:
+        return midi.synthesize(fs=sr, wave=scipy.signal.square)
+    else:
+        raise Exception(f"Instrument {instrument} is not supported, only [1-130]")
+
+def load_melody(melody_path, sr, instrument=4, debug=False):
     if os.path.splitext(melody_path)[-1] == ".mid":
         if debug:
             print("loading MIDI file")
-        midi = pretty_midi.PrettyMIDI(melody_path)
-        melody = midi.fluidsynth(float(sr))
+            melody = load_midi(melody_path, sr, instrument)
     else:
         if debug:
             print("loading audio file")

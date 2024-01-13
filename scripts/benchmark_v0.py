@@ -20,7 +20,7 @@ def walk_filter(input_dir, file_extension=None):
             files.extend([os.path.join(r, f) for f in fs])
     return files
 
-def extract_data(input_dir, captions_path, sr, mode="midi"):
+def extract_data(input_dir, captions_path, sr, mode="midi", instrument=4):
     if mode == "midi":
         file_paths = walk_filter(input_dir, ".mid")
     else:
@@ -28,13 +28,13 @@ def extract_data(input_dir, captions_path, sr, mode="midi"):
     with open(captions_path) as captions_file:
         captions = captions_file.readlines()
 
-    def generate(file_paths, captions, sr):
+    def generate(file_paths, captions, sr, instrument):
         for file_path in file_paths:
             for caption in captions:
-                melody, _ = load_melody(file_path, sr)
+                melody, _ = load_melody(file_path, sr, instrument=instrument)
                 yield melody, file_path, caption
     
-    return len(file_paths) * len(captions), generate(file_paths, captions, sr)
+    return len(file_paths) * len(captions), generate(file_paths, captions, sr, instrument)
 
 def process_melody(melody, device, sr, duration):
     target_sr = 32000
@@ -63,6 +63,7 @@ if __name__ == "__main__":
     parser.add_argument("--model", type=str, default="facebook/musicgen-melody", help="path to evaluation dataset")
     parser.add_argument("--duration", type=int, default=10, help="duration of generated audio")
     parser.add_argument("--mode", type=str, default="midi", choices=["midi", "audio"], help="duration of generated audio")
+    parser.add_argument("--instrument", type=int, default=4, metavar="[1-130]", help="instrument program [1-130] to synthesize with")
     args = parser.parse_args()
 
     # model prep
@@ -71,7 +72,7 @@ if __name__ == "__main__":
     
     # benchmark
     pathlib.Path(args.output_path).mkdir(exist_ok=True, parents=True)
-    n_total, data_generator = extract_data(args.data_path, args.captions_path, 32000, args.mode)
+    n_total, data_generator = extract_data(args.data_path, args.captions_path, 32000, args.mode, args.instrument)
     rows = []
     for melody, path, caption in tqdm(data_generator, total=n_total):
         # evaluate
