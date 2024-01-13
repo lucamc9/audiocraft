@@ -204,7 +204,7 @@ def load_melody(melody_path, sr, instrument=4, debug=False):
     if os.path.splitext(melody_path)[-1] == ".mid":
         if debug:
             print("loading MIDI file")
-            melody = load_midi(melody_path, sr, instrument)
+        melody = load_midi(melody_path, sr, instrument)
     else:
         if debug:
             print("loading audio file")
