@@ -63,7 +63,7 @@ if __name__ == "__main__":
     parser.add_argument("--model", type=str, default="facebook/musicgen-melody", help="path to evaluation dataset")
     parser.add_argument("--duration", type=int, default=10, help="duration of generated audio")
     parser.add_argument("--mode", type=str, default="midi", choices=["midi", "audio"], help="duration of generated audio")
-    parser.add_argument("--instrument", type=int, default=4, metavar="[1-130]", help="instrument program [1-130] to synthesize with")
+    parser.add_argument("--instrument", type=int, default=4, choices=range(1,131), metavar="[1-130]", help="instrument program [1-130] to synthesize with")
     args = parser.parse_args()
 
     # model prep
