@@ -1,4 +1,4 @@
-from audiocraft.metrics import ChromaCosineSimilarityMetric
+from audiocraft.metrics import CLAPTextConsistencyMetric
 from audiocraft.models import MusicGen
 from audiocraft.data.audio_utils import convert_audio, load_melody
 from audiocraft.data.audio import audio_write
@@ -10,6 +10,14 @@ import argparse
 import librosa
 import torch
 import os
+
+def evaluate(caption, model, sr=32000):
+    generated = model.generate([caption])
+    sample_rates = torch.tensor(np.array([sr])[None, :])
+    sizes = torch.tensor(np.array([generated.shape[0]])[None, :]) # assuming size is n_frames here
+    clap_metric = CLAPTextConsistencyMetric()
+    clap_metric.update(generated, [caption], sizes, sample_rates)
+    return clap_metric.compute(), generated[0]
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -28,8 +36,16 @@ if __name__ == "__main__":
     pathlib.Path(args.output_path).mkdir(exist_ok=True, parents=True)
     with open(args.captions_path) as captions_file:
         captions = captions_file.readlines()
+    
     for caption in tqdm(captions, total=len(captions)):
-        generated = model.generate([caption])
+        # evaluate
+        clap_score, generated = evaluate(caption, model)
+        rows.append([caption, clap_score])
+        # save output
         basename = "_".join(caption.split())
         idx = len(rows)-1
         audio_write(f'{args.output_path}/{basename}', generated.cpu(), model.sample_rate, strategy="loudness", loudness_compressor=True)
+
+    df = pd.DataFrame(rows, columns=["caption", "score"])
+    df.to_csv(f"{args.output_path}/results.csv")
+    print(f'Score: {df["score"].mean()}±{df["score"].std()}')
